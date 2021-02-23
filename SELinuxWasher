@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+############################ Copyrights and license ##################################
+#                                                                                    #
+# Copyright 2020 Anton Alekseevich <antonboch12.44@gmail.com>                        #
+#                                                                                    #
+# This file is part of SELinux-Washer.                                               #
+#                                                                                    #
+# SELinux-Washer is free software: you can redistribute it and/or modify it under    #
+# the terms of the GNU Lesser General Public License as published by the Free        #
+# Software Foundation, either version 3 of the License, or (at your option)          #
+# any later version.                                                                 #
+#                                                                                    #
+# SELinux-Washer is distributed in the hope that it will be useful, but WITHOUT ANY  #
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS          #
+# FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more       #
+# details.                                                                           #
+#                                                                                    #
+# You should have received a copy of the GNU Lesser General Public License           #
+# along with SELinux-Washer. If not, see <http://www.gnu.org/licenses/>.             #
+#                                                                                    #
+######################################################################################
+
+import os
+import sys
+
+
+def try_delete_security_selinux_everywhere(start_path):
+    for path in os.listdir(start_path):
+        file_path = start_path + "/" + path
+        print(f"Trying to delete security.selinux from {file_path}!")
+        if os.path.islink(file_path):
+            try:
+                os.removexattr(file_path, "security.selinux")
+            except OSError:
+                print("Failed. Continuing.")
+            continue
+        if os.path.isdir(file_path):
+            try:
+                try:
+                    os.removexattr(file_path, "security.selinux")
+                except OSError:
+                    print("Failed. Continuing.")
+                try_delete_security_selinux_everywhere(file_path)
+            except PermissionError:
+                try:
+                    os.removexattr(file_path, "security.selinux")
+                except OSError:
+                    print("Failed. Continuing.")
+        else:
+            try:
+                os.removexattr(file_path, "security.selinux")
+            except OSError:
+                print("Failed. Continuing.")
+
+
+if __name__ == '__main__':
+    if os.getuid() != 0:
+        print(f"Tool required UID=0 root permissions. Executing: /usr/bin/sudo /usr/bin/python3 {sys.argv[0]} {sys.argv[1]}")
+        os.execv("/usr/bin/sudo", ['/usr/bin/python3', f'{sys.argv[0]}', f'{sys.argv[1]}'])
+    else:
+        try_delete_security_selinux_everywhere(sys.argv[1])
